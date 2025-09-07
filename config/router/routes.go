@@ -2,8 +2,8 @@ package routes
 
 import (
 	//"time"
-	controllers "simple-forum/controller"
-	"simple-forum/middleware"
+	controllers "simple-forum/app/controller"
+	"simple-forum/app/middleware"
 
 	//"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"

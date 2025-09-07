@@ -2,8 +2,8 @@ package controllers
 
 import (
 	"net/http"
-	models "simple-forum/model"
-	"simple-forum/pkg/database"
+	models "simple-forum/app/model"
+	"simple-forum/config/database"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"

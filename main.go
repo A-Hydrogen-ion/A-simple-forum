@@ -1,9 +1,9 @@
 package main
 
 import (
-	models "simple-forum/model"
-	"simple-forum/pkg/database"
-	routes "simple-forum/router"
+	models "simple-forum/app/model"
+	"simple-forum/config/database"
+	routes "simple-forum/config/router"
 	"time"
 
 	"github.com/gin-contrib/cors"

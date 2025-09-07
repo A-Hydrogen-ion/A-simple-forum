@@ -4,8 +4,8 @@ package controllers
 import (
 	"fmt"
 	"net/http"
-	models "simple-forum/model"
-	"simple-forum/pkg/database"
+	models "simple-forum/app/model"
+	"simple-forum/config/database"
 	"strconv"
 	"time"
 

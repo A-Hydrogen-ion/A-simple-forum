@@ -1,12 +1,12 @@
 package controllers
 
 import (
-	"simple-forum/middleware"
+	"simple-forum/app/middleware"
 	// "fmt"
 	// "golang.org/x/crypto/bcrypt"
 	"net/http"
-	models "simple-forum/model"
-	"simple-forum/pkg/database"
+	models "simple-forum/app/model"
+	"simple-forum/config/database"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -50,7 +50,6 @@ func Register(c *gin.Context) {
 } //注册接口已实现
 
 func Login(c *gin.Context) {
-	//models.TestPasswordCheck()   何意味
 	var input models.LoginRequest
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -74,7 +73,7 @@ func Login(c *gin.Context) {
 		return
 	}
 	//创建会话
-	middleware.Login1(c, user)   //何意味？
+	middleware.Login1(c, user)   
 
 	response := models.AuthResponse{
 		UserID: user.ID,

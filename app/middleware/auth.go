@@ -3,8 +3,8 @@ package middleware
 
 import (
 	"net/http"
-	"simple-forum/pkg/database"
-	"simple-forum/model"
+	"simple-forum/config/database"
+	"simple-forum/app/model"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-contrib/sessions"
