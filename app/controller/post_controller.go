@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	models "simple-forum/app/model"
@@ -222,7 +223,7 @@ func UpdatePost(c *gin.Context) {
 	user := currentUser.(models.User)
 
 	// 查找帖子
-	post, err := postService.GetPostByID(input.PostID)
+	post, err := postService.GetPostByID(fmt.Sprintf("%d", input.PostID))
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "帖子不存在"})

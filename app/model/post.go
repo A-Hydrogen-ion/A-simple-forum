@@ -38,6 +38,6 @@ type PostListResponse struct {
 
 // 更新帖子请求结构体
 type UpdatePostRequest struct {
-    PostID  string   `json:"post_id" binding:"required"`
+    PostID  uint   `json:"post_id" binding:"required"`
     Content string `json:"content" binding:"required,min=1"`
 }

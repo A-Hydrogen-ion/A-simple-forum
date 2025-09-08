@@ -1,0 +1,22 @@
+登录：{
+    "username": "123",
+    "password": "12345678"
+}
+注册{
+    "username": "1234424",
+    "name": "ximo",
+    "password": "12345678",
+    "user_type": 2
+}usertype码区分是否管理员，1代表学生，2代表管理员
+发布帖子{
+    "content": "string",
+    "title": "string"
+}
+举报帖子{
+    "post_id": 4,
+    "reason": "string"
+}
+管理员审核举报帖子{
+    "report_id": 2,
+    "approval": 1
+}

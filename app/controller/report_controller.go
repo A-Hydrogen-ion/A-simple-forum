@@ -10,7 +10,9 @@ import (
 	"gorm.io/gorm"
 )
 
-var reportService = service.NewReportService()
+func getReportService() *service.ReportService {
+	return service.NewReportService()
+}
 
 // ReportPost 举报帖子
 func ReportPost(c *gin.Context) {
@@ -29,7 +31,7 @@ func ReportPost(c *gin.Context) {
 	}
 
 	user := currentUser.(models.User)
-
+	reportService := getReportService()
 	// 检查帖子是否存在
 	postExists, err := reportService.CheckPostExists(input.PostID)
 	if err != nil {
@@ -87,7 +89,7 @@ func ViewReportApproval(c *gin.Context) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "无权限访问"})
 		return
 	}
-
+	reportService := getReportService()
 	// 获取所有待处理的举报
 	reports, err := reportService.GetPendingReports()
 	if err != nil {
@@ -151,7 +153,7 @@ func ApproveReport(c *gin.Context) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "需要管理员权限"})
 		return
 	}
-
+	reportService := getReportService()
 	// 获取举报信息
 	report, err := reportService.GetReportByID(input.ReportID)
 	if err != nil {
@@ -185,7 +187,7 @@ func ApproveReport(c *gin.Context) {
 			}
 			return
 		}
-
+		reportService := getReportService()
 		// 软删除帖子
 		if err := reportService.DeletePost(&post); err != nil {
 			tx.Rollback()
@@ -199,7 +201,7 @@ func ApproveReport(c *gin.Context) {
 		// 审批不通过，更新举报状态为已拒绝
 		report.Status = models.ReportStatusRejected
 	}
-
+	reportService = getReportService()
 	// 更新举报记录
 	if err := reportService.UpdateReportStatus(&report, report.Status); err != nil {
 		tx.Rollback()
@@ -228,14 +230,14 @@ func GetReportResults(c *gin.Context) {
 	}
 
 	user := currentUser.(models.User)
-
+	reportService := getReportService()
 	// 获取该用户的所有举报记录
 	reports, err := reportService.GetReportsByUserID(user.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取举报记录失败"})
 		return
 	}
-
+	reportService= getReportService()
 	// 转换为响应格式
 	var reportResults []models.ReportResultResponse
 	for _, report := range reports {
