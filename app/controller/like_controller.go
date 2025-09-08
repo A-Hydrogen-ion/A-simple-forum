@@ -1,15 +1,14 @@
 package controllers
+
 import (
-	"fmt"
 	"net/http"
-	models "simple-forum/app/model"
-	"simple-forum/config/database"
+	"simple-forum/app/service"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	"golang.org/x/net/context"
 )
+
+var likeService = service.NewLikeService()
 
 // GetPostLikes 获取帖子点赞数
 func GetPostLikes(c *gin.Context) {
@@ -26,34 +25,12 @@ func GetPostLikes(c *gin.Context) {
 		return
 	}
 
-	// 尝试从缓存中获取点赞数
-	cacheKey := fmt.Sprintf("post:%d:likes", postID)
-	likesCount, err := database.RedisClient.Get(context.Background(), cacheKey).Uint64()
-
-	if err == nil {
-		// 缓存命中，直接返回
-		c.JSON(http.StatusOK, gin.H{
-			"code": 200,
-			"data": gin.H{
-				"likes": likesCount,
-			},
-			"msg": "success",
-		})
-		return
-	}
-
-	// 缓存未命中，从数据库查询
-	var count int64
-	if err := database.DB.Model(&models.Like{}).
-		Where("post_id = ?", postID).
-		Count(&count).Error; err != nil {
+	// 使用Service获取点赞数
+	count, err := likeService.GetPostLikes(uint(postID))
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取点赞数失败"})
 		return
 	}
-
-	// 将结果存入缓存，设置5分钟过期时间
-	database.RedisClient.Set(context.Background(), cacheKey, count, 5*time.Minute)
-
 	// 返回结果
 	c.JSON(http.StatusOK, gin.H{
 		"code": 200,
@@ -76,56 +53,33 @@ func Like(c *gin.Context) {
 		return
 	}
 
-	// 检查帖子是否存在
-	var post models.Post
-	if err := database.DB.First(&post, input.PostID).Error; err != nil {
+	// 使用Service检查帖子是否存在
+	postExists, err := likeService.CheckPostExists(input.PostID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "检查帖子失败"})
+		return
+	}
+	if !postExists {
 		c.JSON(http.StatusNotFound, gin.H{"error": "帖子不存在"})
 		return
 	}
-
-	// 检查用户是否存在
-	var user models.User
-	if err := database.DB.First(&user, input.UserID).Error; err != nil {
+	// 使用Service检查用户是否存在
+	userExists, err := likeService.CheckUserExists(input.UserID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "检查用户失败"})
+		return
+	}
+	if !userExists {
 		c.JSON(http.StatusNotFound, gin.H{"error": "用户不存在"})
 		return
 	}
 
-	// Redis 键
-	likeSetKey := fmt.Sprintf("post:%d:likes:users", input.PostID)
-	likeCountKey := fmt.Sprintf("post:%d:likes:count", input.PostID)
-	syncSetKey := "likes:to_sync"
-
-	// 检查用户是否已经点赞
-	isLiked, err := database.RedisClient.SIsMember(database.Ctx, likeSetKey, input.UserID).Result()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "检查点赞状态失败"})
-		return
-	}
-
-	// 使用 Redis 事务确保原子性
-	pipe := database.RedisClient.TxPipeline()
-
-	if isLiked {
-		// 取消点赞
-		pipe.SRem(database.Ctx, likeSetKey, input.UserID)
-		pipe.Decr(database.Ctx, likeCountKey)
-		// 添加到同步集合（标记为需要删除）
-		pipe.SAdd(database.Ctx, syncSetKey, fmt.Sprintf("remove:%d:%d", input.PostID, input.UserID))
-	} else {
-		// 点赞
-		pipe.SAdd(database.Ctx, likeSetKey, input.UserID)
-		pipe.Incr(database.Ctx, likeCountKey)
-		// 添加到同步集合（标记为需要添加）
-		pipe.SAdd(database.Ctx, syncSetKey, fmt.Sprintf("add:%d:%d", input.PostID, input.UserID))
-	}
-
-	// 执行事务
-	_, err = pipe.Exec(database.Ctx)
+	// 使用Service进行点赞/取消点赞操作
+	err = likeService.ToggleLike(input.PostID, input.UserID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "操作失败"})
 		return
 	}
-
 	// 返回成功响应
 	c.JSON(http.StatusOK, gin.H{
 		"code": 200,

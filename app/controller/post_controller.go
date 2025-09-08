@@ -1,20 +1,42 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 	models "simple-forum/app/model"
-	"simple-forum/config/database"
-	"time"
+	"simple-forum/app/service"
+
+	//"simple-forum/config/database"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"gorm.io/gorm"
 )
+
+// 使用函数获取服务实例
+func getPostService() *service.PostService {
+	return service.NewPostService()
+}
 
 // CreatePost 发布帖子
 func CreatePost(c *gin.Context) {
 	var input models.CreatePostRequest
 
 	if err := c.ShouldBindJSON(&input); err != nil {
+		log.Printf("请求绑定错误: %v", err)
+		if fieldErrors, ok := err.(validator.ValidationErrors); ok {
+			for _, fieldError := range fieldErrors {
+				switch fieldError.Field() {
+				case "Title":
+					c.JSON(http.StatusBadRequest, gin.H{"error": "帖子标题是必需的,且不能为空"})
+					return
+				case "Content":
+					c.JSON(http.StatusBadRequest, gin.H{"error": "帖子内容是必需的,且不能为空"})
+					return
+				}
+			}
+		}
+
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -36,29 +58,30 @@ func CreatePost(c *gin.Context) {
 		Username: user.Username, // 设置作者ID
 	}
 
-	if err := database.DB.Create(&post).Error; err != nil {
+	// 使用Service创建帖子
+	postService := getPostService()
+	if err := postService.CreatePost(&post); err != nil {
+		log.Printf("创建帖子失败: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "发布帖子失败"})
 		return
 	}
-
 	// 返回成功响应
 	c.JSON(http.StatusOK, gin.H{
 		"code": 200,
 		"data": nil,
-		"msg":  "帖子发布成功",
+		"msg":  "success",
 	})
 }
 
 // GetPosts 获取所有帖子（基础版本，点赞数暂设为0）
 func GetPosts(c *gin.Context) {
-	var posts []models.Post
-
+	postService := getPostService()
+	posts, err := postService.GetPosts()
 	// 从数据库获取所有帖子，按创建时间降序排列
-	if err := database.DB.Order("created_at desc").Find(&posts).Error; err != nil {
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取帖子列表失败"})
 		return
 	}
-
 	// 转换为响应格式
 	var postList []models.PostResponse
 	for _, post := range posts {
@@ -84,6 +107,7 @@ func GetPosts(c *gin.Context) {
 // DeletePost 软删除帖子
 func DeletePost(c *gin.Context) {
 	// 从查询参数中获取 post_id
+	postService := getPostService()
 	postID := c.Query("post_id")
 	if postID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "帖子ID不能为空"})
@@ -100,8 +124,8 @@ func DeletePost(c *gin.Context) {
 	user := currentUser.(models.User)
 
 	// 查找帖子
-	var post models.Post
-	if err := database.DB.First(&post, postID).Error; err != nil {
+	post, err := postService.GetPostByID(postID)
+	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "帖子不存在"})
 		} else {
@@ -117,7 +141,7 @@ func DeletePost(c *gin.Context) {
 	}
 
 	// 软删除帖子（使用Delete方法）
-	if err := database.DB.Delete(&post).Error; err != nil {
+	if err := postService.DeletePost(&post); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除帖子失败"})
 		return
 	}
@@ -132,6 +156,7 @@ func DeletePost(c *gin.Context) {
 
 // RestorePost 恢复已删除的帖子
 func RestorePost(c *gin.Context) {
+	postService := getPostService()
 	// 从查询参数中获取 post_id
 	postID := c.Query("post_id")
 	if postID == "" {
@@ -147,10 +172,9 @@ func RestorePost(c *gin.Context) {
 	}
 
 	user := currentUser.(models.User)
-
+	post, err := postService.GetDeletedPostByID(postID)
 	// 查找已删除的帖子（使用Unscoped()来查询包括已删除的记录）
-	var post models.Post
-	if err := database.DB.Unscoped().First(&post, postID).Error; err != nil {
+	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "帖子不存在"})
 		} else {
@@ -166,7 +190,7 @@ func RestorePost(c *gin.Context) {
 	}
 
 	// 恢复帖子
-	if err := database.DB.Unscoped().Model(&post).Update("deleted_at", nil).Error; err != nil {
+	if err := postService.RestorePost(&post); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "恢复帖子失败"})
 		return
 	}
@@ -180,6 +204,7 @@ func RestorePost(c *gin.Context) {
 
 // UpdatePost 修改帖子内容
 func UpdatePost(c *gin.Context) {
+	postService := getPostService()
 	var input models.UpdatePostRequest
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -197,8 +222,8 @@ func UpdatePost(c *gin.Context) {
 	user := currentUser.(models.User)
 
 	// 查找帖子
-	var post models.Post
-	if err := database.DB.First(&post, input.PostID).Error; err != nil {
+	post, err := postService.GetPostByID(input.PostID)
+	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "帖子不存在"})
 		} else {
@@ -206,7 +231,6 @@ func UpdatePost(c *gin.Context) {
 		}
 		return
 	}
-
 	// 检查用户是否有权限修改该帖子
 	if post.UserID != user.ID {
 		c.JSON(http.StatusForbidden, gin.H{"error": "只能修改自己的帖子"})
@@ -214,14 +238,10 @@ func UpdatePost(c *gin.Context) {
 	}
 
 	// 更新帖子内容
-	if err := database.DB.Model(&post).Update("content", input.Content).Error; err != nil {
+	if err := postService.UpdatePostContent(&post, input.Content); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新帖子失败"})
 		return
 	}
-
-	// 同时更新 updated_at 时间戳
-	database.DB.Model(&post).Update("updated_at", time.Now())
-
 	// 返回成功响应
 	c.JSON(http.StatusOK, gin.H{
 		"code": 200,

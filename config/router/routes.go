@@ -25,7 +25,7 @@ func SetupRouter(r *gin.Engine) *gin.Engine {
 		protected.DELETE("/student/post", controllers.DeletePost)           //删除自己的帖子
 		protected.POST("/student/post/restore", controllers.RestorePost)    //恢复自己的帖子
 		protected.GET("/student/post", controllers.GetPosts)                //应该是获取所有帖子
-		protected.POST("/student/report-post", controllers.GetPosts)        //举报帖子
+		protected.POST("/student/report-post", controllers.ReportPost)        //举报帖子
 		protected.GET("/student/report-post", controllers.GetReportResults) //学生查看审核结果
 		protected.GET("admin/report", controllers.ViewReportApproval)       //获取所有未审批的举报帖子列表
 		protected.POST("admin/report", controllers.ApproveReport)           //审核被举报的帖子

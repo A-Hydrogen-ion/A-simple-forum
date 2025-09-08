@@ -21,7 +21,7 @@ func ConnectRedis() {
 	// 测试连接
 	_, err := RedisClient.Ping(Ctx).Result()
 	if err != nil {
-		log.Fatal("连接Redis失败", err)
+		log.Println("连接Redis失败", err)
 	}
 
 	fmt.Println("Redis连接成功")

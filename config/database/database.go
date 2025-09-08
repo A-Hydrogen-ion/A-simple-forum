@@ -10,6 +10,7 @@ import (
 )
 
 var DB *gorm.DB
+
 func ConnectDB() {
 	dsn := "root:qzh20061103@tcp(127.0.0.1:3306)/forum_db?charset=utf8mb4&parseTime=True&loc=Local"
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
@@ -28,4 +29,11 @@ func ConnectDB() {
 
 	DB = db
 	fmt.Println("连接成功")
+	//测试数据库连接
+	var version string
+	if err := DB.Raw("SELECT VERSION()").Scan(&version).Error; err != nil {
+		log.Printf("数据库连接测试失败: %v", err)
+	} else {
+		log.Printf("数据库版本: %s", version)
+	}
 }

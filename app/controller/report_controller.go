@@ -3,11 +3,14 @@ package controllers
 import (
 	"net/http"
 	models "simple-forum/app/model"
+	"simple-forum/app/service"
 	"simple-forum/config/database"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
+
+var reportService = service.NewReportService()
 
 // ReportPost 举报帖子
 func ReportPost(c *gin.Context) {
@@ -28,23 +31,26 @@ func ReportPost(c *gin.Context) {
 	user := currentUser.(models.User)
 
 	// 检查帖子是否存在
-	var post models.Post
-	if err := database.DB.First(&post, input.PostID).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "帖子不存在"})
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "查询帖子失败"})
-		}
+	postExists, err := reportService.CheckPostExists(input.PostID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询帖子失败"})
+		return
+	}
+	if !postExists {
+		c.JSON(http.StatusNotFound, gin.H{"error": "帖子不存在"})
 		return
 	}
 
 	// 检查用户是否已经举报过该帖子
-	var existingReport models.Report
-	if err := database.DB.Where("user_id = ? AND post_id = ?", user.ID, input.PostID).First(&existingReport).Error; err == nil {
+	reportExists, err := reportService.CheckReportExists(user.ID, input.PostID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "检查举报记录失败"})
+		return
+	}
+	if reportExists {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "您已经举报过该帖子"})
 		return
 	}
-
 	// 创建举报记录
 	report := models.Report{
 		UserID: user.ID,
@@ -53,7 +59,7 @@ func ReportPost(c *gin.Context) {
 		Status: models.ReportStatusPending, // 初始状态为待处理
 	}
 
-	if err := database.DB.Create(&report).Error; err != nil {
+	if err := reportService.CreateReport(&report); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "举报失败"})
 		return
 	}
@@ -66,7 +72,7 @@ func ReportPost(c *gin.Context) {
 	})
 }
 
-//ViewReportApproval 获取所有未审批的举报
+// ViewReportApproval 获取所有未审批的举报
 func ViewReportApproval(c *gin.Context) {
 	// 从上下文中获取当前用户
 	currentUser, exists := c.Get("user")
@@ -83,11 +89,8 @@ func ViewReportApproval(c *gin.Context) {
 	}
 
 	// 获取所有待处理的举报
-	var reports []models.Report
-	if err := database.DB.
-		Where("status = ?", models.ReportStatusPending).
-		Order("created_at desc").
-		Find(&reports).Error; err != nil {
+	reports, err := reportService.GetPendingReports()
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取举报列表失败"})
 		return
 	}
@@ -150,8 +153,8 @@ func ApproveReport(c *gin.Context) {
 	}
 
 	// 获取举报信息
-	var report models.Report
-	if err := database.DB.First(&report, input.ReportID).Error; err != nil {
+	report, err := reportService.GetReportByID(input.ReportID)
+	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "举报记录不存在"})
 		} else {
@@ -184,7 +187,7 @@ func ApproveReport(c *gin.Context) {
 		}
 
 		// 软删除帖子
-		if err := tx.Delete(&post).Error; err != nil {
+		if err := reportService.DeletePost(&post); err != nil {
 			tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "删除帖子失败"})
 			return
@@ -198,7 +201,7 @@ func ApproveReport(c *gin.Context) {
 	}
 
 	// 更新举报记录
-	if err := tx.Save(&report).Error; err != nil {
+	if err := reportService.UpdateReportStatus(&report, report.Status); err != nil {
 		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新举报状态失败"})
 		return
@@ -227,11 +230,8 @@ func GetReportResults(c *gin.Context) {
 	user := currentUser.(models.User)
 
 	// 获取该用户的所有举报记录
-	var reports []models.Report
-	if err := database.DB.
-		Where("user_id = ?", user.ID).
-		Order("created_at desc").
-		Find(&reports).Error; err != nil {
+	reports, err := reportService.GetReportsByUserID(user.ID)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取举报记录失败"})
 		return
 	}
@@ -240,9 +240,10 @@ func GetReportResults(c *gin.Context) {
 	var reportResults []models.ReportResultResponse
 	for _, report := range reports {
 		// 获取被举报帖子标题
-		var post models.Post
-		database.DB.Unscoped().First(&post, report.PostID) // 使用Unscoped获取已删除的帖子
-
+		post, err := reportService.GetPostByID(report.PostID)
+		if err != nil {
+			continue // 跳过错误记录
+		}
 		// 确定状态文字描述
 		statusText := getStatusText(report.Status)
 
