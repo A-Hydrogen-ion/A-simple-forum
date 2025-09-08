@@ -1,6 +1,4 @@
 package controllers
-//点赞写了不代表能用（（（（
-//后面不太会用apifox调试了（悲
 import (
 	"fmt"
 	"net/http"
@@ -66,7 +64,7 @@ func GetPostLikes(c *gin.Context) {
 	})
 }
 
-// ToggleLike 点赞/取消点赞帖子
+// Like 点赞/取消点赞帖子
 func Like(c *gin.Context) {
 	var input struct {
 		PostID uint `json:"post_id" binding:"required"`

@@ -22,10 +22,10 @@ func main() {
 	r := gin.Default()
 
 	// 配置 Session 中间件，使用 cookie 作为存储方式
-	store := cookie.NewStore([]byte("your-secret-key")) // 替换为一个安全的密钥
+	store := cookie.NewStore([]byte("your-secret-key")) // 开发环境使用
 	r.Use(sessions.Sessions("mysession", store))        // "mysession" 是 cookie 的名称
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:8080"}, // 明确指定你的前端起源，不能用通配符"*"
+		AllowOrigins:     []string{"http://localhost:8080"}, // 明确指定前端起源
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
 		AllowCredentials: true,                       // 设置为true，允许浏览器发送Cookie等凭证信息

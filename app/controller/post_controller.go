@@ -49,8 +49,6 @@ func CreatePost(c *gin.Context) {
 	})
 }
 
-// 可以添加其他帖子相关功能，如获取帖子列表、更新帖子、删除帖子等
-
 // GetPosts 获取所有帖子（基础版本，点赞数暂设为0）
 func GetPosts(c *gin.Context) {
 	var posts []models.Post
@@ -118,7 +116,7 @@ func DeletePost(c *gin.Context) {
 		return
 	}
 
-	// 软删除帖子（使用Delete方法而不是Unscoped().Delete）
+	// 软删除帖子（使用Delete方法）
 	if err := database.DB.Delete(&post).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除帖子失败"})
 		return

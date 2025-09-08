@@ -13,7 +13,7 @@ type LoginRequest struct {
 type AuthResponse struct {
 	UserID   uint   `json:"user_id"` 
 	IsAdmin  int    `json:"user_type"`
-} //？
+} //返回结构体
 type Response struct {
 	Data string `json:"data"`
 	Msg  string `json:"msg"`

@@ -12,14 +12,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// func hashPassword(password string) (string, error) {
-// 	// 将明文密码转换为字节切片并哈希，cost 设为 DefaultCost(10)
-// 	hashedBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-// 	if err != nil {
-// 		return "", fmt.Errorf("哈希密码失败: %w", err)
-// 	}
-// 	return string(hashedBytes), nil
-// }
 func Register(c *gin.Context) {
 	var input models.RegisterRequest
 
@@ -47,7 +39,7 @@ func Register(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"code": 200, "data": nil, "msg": "success"})
 
-} //注册接口已实现
+} 
 
 func Login(c *gin.Context) {
 	var input models.LoginRequest
@@ -81,4 +73,4 @@ func Login(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK,gin.H{"code": 200, "data":response ,"msg": "success"})
-}//登录接口已实现
+}

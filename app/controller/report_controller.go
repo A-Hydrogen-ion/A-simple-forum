@@ -64,9 +64,9 @@ func ReportPost(c *gin.Context) {
 		"data": nil,
 		"msg":  "success",
 	})
-} //似乎举报也已经完成
+}
 
-// GetPendingReports 获取所有未审批的举报
+//ViewReportApproval 获取所有未审批的举报
 func ViewReportApproval(c *gin.Context) {
 	// 从上下文中获取当前用户
 	currentUser, exists := c.Get("user")
@@ -76,7 +76,7 @@ func ViewReportApproval(c *gin.Context) {
 	}
 
 	user := currentUser.(models.User)
-	// 检查用户类型是否为管理员 (假设管理员用户类型为2)
+	// 检查用户类型是否为管理员 (管理员usertyp为2)
 	if user.UserType != 2 {
 		c.JSON(http.StatusForbidden, gin.H{"error": "无权限访问"})
 		return

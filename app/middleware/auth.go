@@ -1,4 +1,3 @@
-//写了不知道有什么用（疑惑
 package middleware
 
 import (
@@ -13,7 +12,7 @@ import (
 
 // SessionStore 初始化会话存储
 var SessionStore sessions.Store
-var secretkey = "dev-secret-key-for-simple-fourm-2025-9"//固定密钥
+var secretkey = "dev-secret-key-for-simple-fourm-2025-9"//开发环境使用固定密钥
 func InitSessionStore() {
 	// 使用 cookie 存储会话数据，密钥用于加密会话数据
 	SessionStore = cookie.NewStore([]byte(secretkey))
@@ -33,21 +32,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		
-		// 检查用户ID是否为sting类型（我们数据库中用户ID的类型）
-		// userIDUint, ok := userID.(uint)
-		// if !ok { // 尝试从 float64 转换 (JSON 数字常被解码为 float64)
-        //     if userIDFloat, ok := userID.(float64); ok {
-        //         userIDUint = uint(userIDFloat)
-        //     } else {
-        //         // 类型转换失败，清除无效会话
-        //         session.Clear()
-        //         session.Save()
-        //         c.JSON(http.StatusUnauthorized, gin.H{"error": "会话无效，请重新登录"})
-        //         c.Abort()
-        //         return
-        //     }
-		// }
+
 		var userIDUint uint
 		switch v := userID.(type) {
 		case uint:
@@ -70,18 +55,6 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// c.Set("user", user)
-		// c.Next()
-		// // 从数据库查询用户信息
-		// if err := database.DB.First(&user, userIDUint).Error; err != nil {
-		// 	// 用户不存在，清除会话
-		// 	session.Clear()
-		// 	session.Save()
-		// 	c.JSON(http.StatusUnauthorized, gin.H{"error": "用户不存在，请重新登录"})
-		// 	c.Abort()
-		// 	return
-		// }
-		
 		// 将用户信息存储到上下文中，供后续处理使用
 		c.Set("user", user)
 		c.Set("userID", user.ID)
@@ -105,7 +78,7 @@ func Login1(c *gin.Context, user models.User) {
         HttpOnly: true,      // 增加安全性
         SameSite: http.SameSiteLaxMode, // 根据前端需求调整
     })
-	// 设置会话选项（可选）
+	// 设置会话选项
 	session.Options(sessions.Options{
 		MaxAge: 86400 * 7, // 7天有效期
 		Path:   "/",

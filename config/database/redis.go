@@ -3,7 +3,6 @@ package database
 import (
 	"fmt"
 	"log"
-	//"time"
 
 	"github.com/go-redis/redis/v8"
 	"golang.org/x/net/context"
