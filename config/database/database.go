@@ -12,7 +12,7 @@ import (
 var DB *gorm.DB
 
 func ConnectDB() {
-	dsn := "root:qzh20061103@tcp(127.0.0.1:3306)/forum_db?charset=utf8mb4&parseTime=True&loc=Local"
+	dsn := "root:somepassword@tcp(127.0.0.1:3306)/forum_db?charset=utf8mb4&parseTime=True&loc=Local"
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatal("连接数据库失败", err)
